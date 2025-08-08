@@ -25,6 +25,8 @@ git clone https://github.com/daleconaghan/ml-fitness-tools.git
 cd ml-fitness-tools
 pip install -r requirements.txt
 python week2_strength_predictor.py
+```
+
 
 
 The Journey
