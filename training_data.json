@@ -1,0 +1,10 @@
+{
+  "bench_press": [
+    {"date": "2024-12-09", "sets": 3, "reps": 5, "weight": 70, "rpe": 7, "days_since_last": 3},
+    {"date": "2024-12-13", "sets": 3, "reps": 5, "weight": 72.5, "rpe": 7.5, "days_since_last": 4},
+    {"date": "2024-12-16", "sets": 3, "reps": 5, "weight": 72.5, "rpe": 8, "days_since_last": 3},
+    {"date": "2024-12-20", "sets": 3, "reps": 5, "weight": 75, "rpe": 8, "days_since_last": 4},
+    {"date": "2024-12-23", "sets": 3, "reps": 5, "weight": 75, "rpe": 9, "days_since_last": 3},
+    {"date": "2024-12-27", "sets": 3, "reps": 5, "weight": 77.5, "rpe": 8, "days_since_last": 4}
+  ]
+}
