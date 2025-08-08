@@ -32,12 +32,16 @@ python week2_strength_predictor.py
 The Journey
 
 ✅ Week 1: RPE Calculator
+
 ✅ Week 2: Strength Predictor
+
 ⬜ Week 3 (Aug 15): Recovery API
+
 ⬜ Week 4-260: Building the future of training
 
 Next Week
 Building an API to serve predictions via HTTP. Turn ML models into something anyone can use.
 
 Building at the intersection of machine learning and strength training.
+
 Follow: @daleconaghan
