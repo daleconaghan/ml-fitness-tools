@@ -2,6 +2,9 @@
 
 **Week 2/260** of shipping ML code every week.
 
+📅 **Roadmap:** [View all upcoming features here](ROADMAP.md)
+
+
 ## What's This?
 
 I'm building machine learning tools for serious lifters. Every week for 5 years, I'll ship something new that uses ML to make training smarter.
