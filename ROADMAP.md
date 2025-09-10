@@ -3,7 +3,7 @@ _Tracking every feature, every week — 260 weeks of shipping ML code for seriou
 
 ## 📅 Build Schedule
 **Goal:** Ship 1 machine learning tool for lifters every week for 5 years (260 weeks).  
-**Status:** 2/260 completed ✅  
+**Status:** 4/260 completed ✅  
 
 ---
 
@@ -12,20 +12,14 @@ _Tracking every feature, every week — 260 weeks of shipping ML code for seriou
 | ---- | ----------- | ------- | ------- |
 | 1    | Aug 8, 2025 | **RPE Volume Calculator** | Adjusts training volume based on Rate of Perceived Exertion. Calculates effective training stress, not just weight × reps × sets. Foundation for all future predictions. |
 | 2    | Aug 8, 2025 | **Strength Predictor** | Linear regression model using training history. Predicts next workout weight × reps with confidence score. |
-
----
-
-## 🚧 In Progress
-| Week | Date        | Feature | Goal |
-| ---- | ----------- | ------- | ---- |
-| 3    | Aug 15, 2025 | **Recovery API** | Serve recovery predictions via HTTP. Anyone can hit an endpoint and get a recovery readiness score based on logged training data. |
+| 3    | Aug 15, 2025 | **Recovery API** | FastAPI server with REST endpoints. Recovery score calculation, HTTP API for RPE calculations and strength predictions. Auto-generated docs at `/docs`. |
+| 4    | Sep 10, 2025 | **Overtraining Risk Detector** | Advanced ML algorithm detecting overtraining risk (0-100%). Multi-factor analysis with risk levels and deload recommendations. |
 
 ---
 
 ## 🔜 Upcoming
 | Week | Date        | Feature | Goal |
 | ---- | ----------- | ------- | ---- |
-| 4    | Aug 22, 2025 | **Overtraining Risk Detector** | Predict overtraining risk using training load, RPE, and sleep quality. Output: % risk or traffic light system. |
 | 5    | Aug 29, 2025 | **Workout Plan Recommender** | Auto-generate weekly workout plans based on last 4 weeks of data. Adjusts volume, intensity, and exercises to keep progress steady. |
 | 6    | Sep 5, 2025  | **Exercise Substitution Engine** | Suggest replacement exercises based on available equipment and target muscle groups. |
 | 7    | Sep 12, 2025 | **Plateau Breaker AI** | Detect stalled lifts and suggest strategies to break plateaus (rep schemes, accessory work, deloads). |

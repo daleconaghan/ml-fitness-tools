@@ -1,6 +1,6 @@
 # ML Fitness Tools 💪🤖
 
-Week 3/260 of shipping ML code every week.
+Week 4/260 of shipping ML code every week.
 
 📅 **Roadmap:** [View all upcoming features here](ROADMAP.md)
 
@@ -25,6 +25,12 @@ I'm building machine learning tools for serious lifters. Every week for 5 years,
 - HTTP API for RPE calculations and strength predictions
 - Auto-generated documentation at `/docs`
 
+**Week 4: Overtraining Risk Detector** (Sep 10, 2025)
+- Advanced ML algorithm detecting overtraining risk (0-100%)
+- Multi-factor analysis: training load trends, RPE inflation, recovery metrics
+- Risk levels: Low/Moderate/High/Critical with deload recommendations
+- New `/overtraining-risk` API endpoint
+
 ## Quick Start
 ```bash
 git clone https://github.com/daleconaghan/ml-fitness-tools.git
@@ -32,7 +38,7 @@ cd ml-fitness-tools
 pip install -r requirements.txt
 
 # Run the API server
-python week3_recovery_api.py
+python recovery_api.py
 
 # Or run individual tools
 python week2_strength_predictor.py
@@ -40,17 +46,19 @@ python week2_strength_predictor.py
 
 ## API Usage
 
-Start the server: `python week3_recovery_api.py`
+Start the server: `python recovery_api.py`
 
 **Available endpoints:**
 - `POST /calculate-rpe` - Calculate RPE-based metrics
 - `POST /predict-strength` - Predict next workout strength  
 - `POST /recovery-status` - Get recovery score and recommendations
+- `POST /overtraining-risk` - Detect overtraining risk with recommendations
 - `GET /health` - API health check
 - `GET /docs` - Interactive API documentation
 
-**Example API call:**
+**Example API calls:**
 ```bash
+# Check recovery status
 curl -X POST "http://localhost:8000/recovery-status" \
   -H "Content-Type: application/json" \
   -d '{
@@ -59,6 +67,20 @@ curl -X POST "http://localhost:8000/recovery-status" \
     "sleep_quality": 7.0,
     "stress_level": 4.0,
     "muscle_soreness": 3.0
+  }'
+
+# Detect overtraining risk
+curl -X POST "http://localhost:8000/overtraining-risk" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "recent_sessions": [
+      {"weight": 225, "reps": 5, "rpe": 8.5},
+      {"weight": 230, "reps": 5, "rpe": 9.0}
+    ],
+    "sleep_quality_avg": 6,
+    "stress_level_avg": 7,
+    "motivation_level": 4,
+    "resting_hr_trend": 8
   }'
 ```
 
@@ -70,13 +92,15 @@ curl -X POST "http://localhost:8000/recovery-status" \
 
 ✅ **Week 3**: Recovery API
 
-⬜ **Week 4** (Aug 22): Training Load Optimizer
+✅ **Week 4**: Overtraining Risk Detector
 
-⬜ **Week 5-260**: Building the future of training
+⬜ **Week 5** (Aug 29): Workout Plan Recommender
+
+⬜ **Week 6-260**: Building the future of training
 
 ---
 
-**Next Week**: ML-powered training load optimization. Automatically adjust volume based on recovery metrics.
+**Next Week**: Auto-generated workout plans. ML recommends weekly training based on your last 4 weeks of data.
 
 Building at the intersection of machine learning and strength training.
 
