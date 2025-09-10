@@ -40,8 +40,9 @@ pip install -r requirements.txt
 # Run the API server
 python recovery_api.py
 
-# Or run individual tools
-python week2_strength_predictor.py
+# Or run individual tools (standalone versions)
+python standalone/rpe_calculator.py
+python standalone/week2_strength_predictor.py
 ```
 
 ## API Usage
