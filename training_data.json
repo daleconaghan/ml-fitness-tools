@@ -1,10 +1,44 @@
 {
   "bench_press": [
-    {"date": "2024-12-09", "sets": 3, "reps": 5, "weight": 70, "rpe": 7, "days_since_last": 3},
-    {"date": "2024-12-13", "sets": 3, "reps": 5, "weight": 72.5, "rpe": 7.5, "days_since_last": 4},
-    {"date": "2024-12-16", "sets": 3, "reps": 5, "weight": 72.5, "rpe": 8, "days_since_last": 3},
-    {"date": "2024-12-20", "sets": 3, "reps": 5, "weight": 75, "rpe": 8, "days_since_last": 4},
-    {"date": "2024-12-23", "sets": 3, "reps": 5, "weight": 75, "rpe": 9, "days_since_last": 3},
-    {"date": "2024-12-27", "sets": 3, "reps": 5, "weight": 77.5, "rpe": 8, "days_since_last": 4}
-  ]
+    {"date": "2025-08-15", "sets": 3, "reps": 5, "weight": 70, "rpe": 7, "days_since_last": 3},
+    {"date": "2025-08-18", "sets": 3, "reps": 5, "weight": 72.5, "rpe": 7.5, "days_since_last": 3},
+    {"date": "2025-08-22", "sets": 3, "reps": 5, "weight": 75, "rpe": 8, "days_since_last": 4},
+    {"date": "2025-08-25", "sets": 3, "reps": 5, "weight": 77.5, "rpe": 8.5, "days_since_last": 3},
+    {"date": "2025-08-29", "sets": 3, "reps": 5, "weight": 80, "rpe": 9, "days_since_last": 4},
+    {"date": "2025-09-02", "sets": 3, "reps": 4, "weight": 80, "rpe": 9.5, "days_since_last": 4},
+    {"date": "2025-09-06", "sets": 3, "reps": 5, "weight": 82.5, "rpe": 8, "days_since_last": 4}
+  ],
+  "squat": [
+    {"date": "2025-08-16", "sets": 3, "reps": 5, "weight": 100, "rpe": 7.5, "days_since_last": 3},
+    {"date": "2025-08-20", "sets": 3, "reps": 5, "weight": 105, "rpe": 8, "days_since_last": 4},
+    {"date": "2025-08-23", "sets": 3, "reps": 5, "weight": 110, "rpe": 8.5, "days_since_last": 3},
+    {"date": "2025-08-27", "sets": 3, "reps": 5, "weight": 112.5, "rpe": 9, "days_since_last": 4},
+    {"date": "2025-08-30", "sets": 3, "reps": 4, "weight": 110, "rpe": 9.5, "days_since_last": 3},
+    {"date": "2025-09-03", "sets": 3, "reps": 3, "weight": 105, "rpe": 9, "days_since_last": 4},
+    {"date": "2025-09-07", "sets": 3, "reps": 5, "weight": 107.5, "rpe": 8, "days_since_last": 4}
+  ],
+  "deadlift": [
+    {"date": "2025-08-17", "sets": 1, "reps": 5, "weight": 140, "rpe": 8, "days_since_last": 7},
+    {"date": "2025-08-24", "sets": 1, "reps": 5, "weight": 145, "rpe": 8.5, "days_since_last": 7},
+    {"date": "2025-08-31", "sets": 1, "reps": 5, "weight": 150, "rpe": 9, "days_since_last": 7},
+    {"date": "2025-09-07", "sets": 1, "reps": 3, "weight": 150, "rpe": 9.5, "days_since_last": 7}
+  ],
+  "example_scenarios": {
+    "healthy_progression": [
+      {"date": "2025-09-01", "weight": 100, "reps": 5, "rpe": 7.5},
+      {"date": "2025-09-03", "weight": 102.5, "reps": 5, "rpe": 8},
+      {"date": "2025-09-05", "weight": 105, "reps": 5, "rpe": 8},
+      {"date": "2025-09-08", "weight": 107.5, "reps": 5, "rpe": 8.5},
+      {"date": "2025-09-10", "weight": 110, "reps": 5, "rpe": 8}
+    ],
+    "overtraining_pattern": [
+      {"date": "2025-08-28", "weight": 120, "reps": 5, "rpe": 8.5},
+      {"date": "2025-08-30", "weight": 122.5, "reps": 5, "rpe": 9},
+      {"date": "2025-09-01", "weight": 120, "reps": 4, "rpe": 9.5},
+      {"date": "2025-09-03", "weight": 117.5, "reps": 4, "rpe": 9.5},
+      {"date": "2025-09-05", "weight": 115, "reps": 3, "rpe": 9},
+      {"date": "2025-09-08", "weight": 112.5, "reps": 4, "rpe": 9},
+      {"date": "2025-09-10", "weight": 110, "reps": 5, "rpe": 8.5}
+    ]
+  }
 }
