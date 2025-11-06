@@ -1,0 +1,107 @@
+# Week 5: Workout Plan Recommender
+
+## Summary
+Implements an AI-powered workout plan generator that analyzes the last 4 weeks of training data to automatically generate optimized weekly workout plans with progressive overload.
+
+**Key Features:**
+- AI-generated weekly workout plans based on training history
+- Progressive overload calculations with automatic volume adjustments
+- Multiple goal support: strength, hypertrophy, maintenance
+- Adaptive training splits (3-6 days/week): Full Body, Upper/Lower, PPL
+- Recovery score integration for training stress adjustment
+- Exercise categorization (push/pull/legs/upper/lower)
+- Comprehensive recommendations and progression strategies
+
+## Implementation Details
+
+### New Pydantic Models
+- `WorkoutPlanRequest`: Input model with training history, goal, training days, recovery score
+- `DailyWorkout`: Model for individual daily workouts with exercises and notes
+- `WorkoutPlanResponse`: Output model with weekly plan, volume, stress, strategy, recommendations
+
+### Core Algorithm
+Implemented `generate_workout_plan()` function (~200 lines) that:
+1. Analyzes last 4 weeks (12 sessions) per exercise
+2. Calculates progression rates using linear regression
+3. Estimates 1RMs for intensity calculations
+4. Determines optimal training split based on days/week
+5. Adjusts intensity based on goal (strength: 85-90% 1RM, hypertrophy: 70-80% 1RM)
+6. Adjusts volume for recovery score if provided
+7. Generates 7-day plan with exercises, sets, reps, weights, RPE targets
+8. Returns volume, stress estimates, strategy, and recommendations
+
+### API Endpoint
+New `/generate-workout-plan` POST endpoint:
+- Accepts training history dict with exercise names as keys
+- Returns comprehensive weekly workout plan
+- Fully documented in OpenAPI schema
+
+### Testing
+**Unit Tests** (10 tests in `TestWorkoutPlanGenerator`):
+- Basic workout plan generation
+- Strength/hypertrophy/maintenance goal handling
+- Recovery score adjustments
+- Training split variations (3-6 days)
+- Progressive overload verification
+- Edge cases (insufficient/minimal data)
+- Recommendation generation
+
+**API Tests** (12 tests in `TestWorkoutPlanEndpoint`):
+- Valid requests with different configurations
+- Goal variations (strength/hypertrophy/maintenance)
+- Recovery score impact
+- Training days variations (3-6 days)
+- Edge cases (empty history, missing fields, invalid goals)
+- Exercise selection verification
+
+**Test Results:** All 61 tests passing (19 new tests added)
+
+### Documentation Updates
+- **README.md**: Added Week 5 to completed projects, new API endpoint, usage example
+- **ROADMAP.md**: Moved Week 5 from upcoming to completed (5/260)
+- Updated test count badge: 42 → 61 passing tests
+- Added comprehensive curl example demonstrating the new endpoint
+
+## Example Usage
+
+```bash
+curl -X POST "http://localhost:8000/generate-workout-plan" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "training_history": {
+      "squat": [
+        {"weight": 315, "reps": 5, "rpe": 8.5},
+        {"weight": 320, "reps": 5, "rpe": 9.0}
+      ],
+      "bench_press": [
+        {"weight": 225, "reps": 5, "rpe": 8.0},
+        {"weight": 230, "reps": 5, "rpe": 8.5}
+      ]
+    },
+    "goal": "hypertrophy",
+    "training_days_per_week": 4,
+    "recovery_score": 80.0
+  }'
+```
+
+## Test Plan
+- [x] All 61 tests pass
+- [x] Unit tests cover core algorithm logic
+- [x] API tests verify endpoint functionality
+- [x] Edge cases handled (empty history, invalid inputs)
+- [x] Documentation updated
+- [x] Code follows project style (Black, Ruff, isort)
+- [x] No security issues (Bandit)
+
+## Files Changed
+- `recovery_api.py`: +193 lines (models, algorithm, endpoint)
+- `tests/test_ml_algorithms.py`: +10 new unit tests
+- `tests/test_api.py`: +12 new API tests
+- `README.md`: Updated Week 5 completion, new endpoint, examples
+- `ROADMAP.md`: Moved Week 5 to completed
+
+## Impact
+- New feature, no breaking changes
+- Extends existing API with new endpoint
+- All existing tests continue to pass
+- Ready for merge
