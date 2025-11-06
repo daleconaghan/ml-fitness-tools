@@ -11,7 +11,8 @@ from recovery_api import (
     calculate_rpe_metrics,
     predict_next_strength,
     calculate_recovery_score,
-    detect_overtraining_risk
+    detect_overtraining_risk,
+    generate_workout_plan
 )
 
 
@@ -294,3 +295,220 @@ class TestEdgeCases:
         )
         assert result["recovery_score"] >= 0
         assert result["recovery_score"] <= 100
+
+
+class TestWorkoutPlanGenerator:
+    """Tests for workout plan generation (Week 5)"""
+
+    def test_basic_workout_plan_generation(self):
+        """Test basic workout plan generation"""
+        training_history = {
+            "squat": [
+                {"weight": 100, "reps": 5, "rpe": 8.0},
+                {"weight": 102.5, "reps": 5, "rpe": 8.0},
+                {"weight": 105, "reps": 5, "rpe": 8.5},
+            ],
+            "bench_press": [
+                {"weight": 80, "reps": 5, "rpe": 7.5},
+                {"weight": 82.5, "reps": 5, "rpe": 8.0},
+                {"weight": 85, "reps": 5, "rpe": 8.0},
+            ]
+        }
+
+        result = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=4,
+            recovery_score=80.0
+        )
+
+        assert "weekly_plan" in result
+        assert "total_weekly_volume" in result
+        assert "estimated_training_stress" in result
+        assert "progression_strategy" in result
+        assert "recommendations" in result
+
+        # Should have 4 training days + 3 rest days = 7 total days
+        assert len(result["weekly_plan"]) == 7
+
+        # Should have some training days with exercises
+        training_days_count = sum(1 for day in result["weekly_plan"] if day["exercises"])
+        assert training_days_count == 4
+
+        # Volume and stress should be positive
+        assert result["total_weekly_volume"] > 0
+        assert result["estimated_training_stress"] > 0
+
+    def test_strength_goal_workout_plan(self):
+        """Test workout plan generation with strength goal"""
+        training_history = {
+            "squat": [
+                {"weight": 120, "reps": 5, "rpe": 8.5},
+                {"weight": 122.5, "reps": 5, "rpe": 8.5},
+                {"weight": 125, "reps": 5, "rpe": 9.0},
+            ]
+        }
+
+        result = generate_workout_plan(
+            training_history=training_history,
+            goal="strength",
+            training_days=3
+        )
+
+        assert result["progression_strategy"].lower().find("linear") != -1
+        # Strength goal should have higher target weights
+        assert result["total_weekly_volume"] > 0
+
+    def test_maintenance_goal_workout_plan(self):
+        """Test workout plan generation with maintenance goal"""
+        training_history = {
+            "squat": [
+                {"weight": 100, "reps": 5, "rpe": 7.5},
+                {"weight": 100, "reps": 5, "rpe": 7.5},
+                {"weight": 100, "reps": 5, "rpe": 7.5},
+            ]
+        }
+
+        result = generate_workout_plan(
+            training_history=training_history,
+            goal="maintenance",
+            training_days=3
+        )
+
+        assert "maintenance" in result["progression_strategy"].lower()
+
+    def test_workout_plan_with_low_recovery(self):
+        """Test that low recovery score reduces intensity"""
+        training_history = {
+            "bench_press": [
+                {"weight": 80, "reps": 5, "rpe": 8.0},
+                {"weight": 82.5, "reps": 5, "rpe": 8.0},
+                {"weight": 85, "reps": 5, "rpe": 8.0},
+            ]
+        }
+
+        high_recovery = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=3,
+            recovery_score=90.0
+        )
+
+        low_recovery = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=3,
+            recovery_score=40.0
+        )
+
+        # Low recovery should result in lower training stress
+        assert low_recovery["estimated_training_stress"] < high_recovery["estimated_training_stress"]
+
+        # Low recovery should have recommendations about it
+        recommendations_text = " ".join(low_recovery["recommendations"]).lower()
+        assert "recovery" in recommendations_text or "sleep" in recommendations_text
+
+    def test_workout_plan_training_split(self):
+        """Test that appropriate training splits are used"""
+        training_history = {
+            "squat": [{"weight": 100, "reps": 5, "rpe": 8.0}] * 3,
+            "bench_press": [{"weight": 80, "reps": 5, "rpe": 8.0}] * 3,
+            "deadlift": [{"weight": 140, "reps": 5, "rpe": 8.5}] * 3,
+        }
+
+        # Test 3-day split (should be Push/Pull/Legs)
+        result_3day = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=3
+        )
+        assert len([d for d in result_3day["weekly_plan"] if d["exercises"]]) == 3
+
+        # Test 4-day split (should be Upper/Lower split)
+        result_4day = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=4
+        )
+        assert len([d for d in result_4day["weekly_plan"] if d["exercises"]]) == 4
+
+    def test_insufficient_training_data(self):
+        """Test that insufficient data raises appropriate error"""
+        training_history = {}
+
+        with pytest.raises(ValueError, match="No training history"):
+            generate_workout_plan(
+                training_history=training_history,
+                goal="hypertrophy",
+                training_days=4
+            )
+
+    def test_minimal_training_data(self):
+        """Test with minimal but valid training data"""
+        training_history = {
+            "squat": [
+                {"weight": 100, "reps": 5, "rpe": 8.0},
+                {"weight": 100, "reps": 5, "rpe": 8.0},
+            ]
+        }
+
+        # Should work with minimal data
+        result = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=2
+        )
+
+        assert "weekly_plan" in result
+        assert len(result["weekly_plan"]) == 7  # 2 training + 5 rest days
+
+    def test_progression_applied(self):
+        """Test that progressive overload is applied"""
+        training_history = {
+            "squat": [
+                {"weight": 100, "reps": 5, "rpe": 8.0},
+                {"weight": 102.5, "reps": 5, "rpe": 8.0},
+                {"weight": 105, "reps": 5, "rpe": 8.0},
+                {"weight": 107.5, "reps": 5, "rpe": 8.0},
+            ]
+        }
+
+        result = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=3
+        )
+
+        # Find a training day with squat
+        squat_exercise = None
+        for day in result["weekly_plan"]:
+            for ex in day["exercises"]:
+                if "squat" in ex["exercise"].lower():
+                    squat_exercise = ex
+                    break
+            if squat_exercise:
+                break
+
+        # Target weight should be higher than recent average (105)
+        if squat_exercise:
+            assert squat_exercise["weight_kg"] > 105
+
+    def test_recommendations_generated(self):
+        """Test that useful recommendations are generated"""
+        training_history = {
+            "squat": [
+                {"weight": 100, "reps": 5, "rpe": 9.0},
+                {"weight": 100, "reps": 5, "rpe": 9.5},
+                {"weight": 100, "reps": 5, "rpe": 9.5},
+            ]
+        }
+
+        result = generate_workout_plan(
+            training_history=training_history,
+            goal="hypertrophy",
+            training_days=3
+        )
+
+        # Should recommend deload due to high RPE
+        recommendations_text = " ".join(result["recommendations"]).lower()
+        assert "rpe" in recommendations_text or "deload" in recommendations_text

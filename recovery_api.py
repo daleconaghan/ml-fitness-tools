@@ -100,6 +100,24 @@ class OvertrainingResponse(BaseModel):
     recommendations: List[str]
     deload_suggested: bool
 
+class WorkoutPlanRequest(BaseModel):
+    training_history: Dict[str, List[Dict]]  # Exercise name -> sessions
+    goal: str = "hypertrophy"  # strength, hypertrophy, maintenance
+    training_days_per_week: int = 4
+    recovery_score: Optional[float] = None  # 0-100, optional
+
+class DailyWorkout(BaseModel):
+    day: str
+    exercises: List[Dict]  # List of exercises with sets, reps, weight, rpe
+    notes: str
+
+class WorkoutPlanResponse(BaseModel):
+    weekly_plan: List[DailyWorkout]
+    total_weekly_volume: float
+    estimated_training_stress: float
+    progression_strategy: str
+    recommendations: List[str]
+
 # RPE Calculator (from Week 1)
 def calculate_rpe_metrics(weight: float, reps: int, rpe: float) -> Dict:
     """Calculate RPE-based training metrics"""
@@ -351,17 +369,213 @@ def detect_overtraining_risk(sessions: List[Dict], sleep_avg: float, stress_avg:
         "deload_suggested": deload_suggested
     }
 
+# New Workout Plan Recommender (Week 5)
+def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
+                         training_days: int, recovery_score: Optional[float] = None) -> Dict:
+    """Generate weekly workout plan based on training history and goals"""
+
+    if not training_history:
+        raise ValueError("No training history provided")
+
+    # Analyze recent training for each exercise
+    exercise_analysis = {}
+    total_volume = 0
+    total_stress = 0
+
+    for exercise, sessions in training_history.items():
+        if not sessions:
+            continue
+
+        # Get last 4 weeks of data (up to 12 sessions per exercise)
+        recent_sessions = sessions[-12:] if len(sessions) > 12 else sessions
+
+        if len(recent_sessions) < 2:
+            continue
+
+        # Analyze progression
+        weights = [s.get('weight', 0) for s in recent_sessions[-5:]]
+        rpes = [s.get('rpe', 8) for s in recent_sessions[-5:]]
+
+        # Calculate average and trend
+        avg_weight = np.mean(weights)
+        avg_rpe = np.mean(rpes)
+
+        # Simple progression calculation
+        if len(weights) >= 3:
+            early_avg = np.mean(weights[:len(weights)//2])
+            late_avg = np.mean(weights[len(weights)//2:])
+            progression_rate = (late_avg - early_avg) / early_avg if early_avg > 0 else 0
+        else:
+            progression_rate = 0.025  # Default 2.5%
+
+        # Estimate 1RM from recent best set
+        best_recent = max(recent_sessions[-3:], key=lambda x: x.get('weight', 0))
+        rpe_to_percent = {10: 100, 9.5: 97, 9: 94, 8.5: 91, 8: 88, 7.5: 85, 7: 82}
+        intensity_percent = rpe_to_percent.get(best_recent.get('rpe', 8), 85)
+        estimated_1rm = best_recent.get('weight', avg_weight) / (intensity_percent / 100)
+
+        exercise_analysis[exercise] = {
+            'avg_weight': avg_weight,
+            'avg_rpe': avg_rpe,
+            'progression_rate': progression_rate,
+            'estimated_1rm': estimated_1rm,
+            'recent_sessions': len(recent_sessions)
+        }
+
+    if not exercise_analysis:
+        raise ValueError("Insufficient training data to generate plan")
+
+    # Determine training split based on days per week
+    if training_days <= 2:
+        split = ["Full Body A", "Full Body B"]
+    elif training_days == 3:
+        split = ["Push", "Pull", "Legs"]
+    elif training_days == 4:
+        split = ["Upper A", "Lower A", "Upper B", "Lower B"]
+    elif training_days == 5:
+        split = ["Push", "Pull", "Legs", "Upper", "Lower"]
+    else:
+        split = ["Push", "Pull", "Legs", "Upper", "Lower", "Full Body"]
+
+    # Adjust intensity based on goal and recovery
+    if goal == "strength":
+        base_rpe = 8.5
+        rep_range = (3, 5)
+        sets = 4
+    elif goal == "hypertrophy":
+        base_rpe = 8.0
+        rep_range = (6, 10)
+        sets = 3
+    else:  # maintenance
+        base_rpe = 7.0
+        rep_range = (5, 8)
+        sets = 3
+
+    # Adjust for recovery if provided
+    if recovery_score is not None:
+        if recovery_score < 50:
+            base_rpe -= 1.5
+            sets = max(2, sets - 1)
+        elif recovery_score < 70:
+            base_rpe -= 0.5
+
+    # Generate weekly plan
+    weekly_plan = []
+    day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+    for i in range(training_days):
+        day_type = split[i % len(split)]
+        day_name = day_names[i]
+
+        # Select exercises for this day based on split type
+        day_exercises = []
+
+        for exercise_name, analysis in exercise_analysis.items():
+            # Simple exercise categorization
+            exercise_lower = exercise_name.lower()
+
+            # Determine if exercise fits this day
+            include = False
+            if "Full Body" in day_type:
+                include = True
+            elif "Push" in day_type and any(x in exercise_lower for x in ['bench', 'press', 'chest']):
+                include = True
+            elif "Pull" in day_type and any(x in exercise_lower for x in ['row', 'pull', 'deadlift']):
+                include = True
+            elif "Legs" in day_type or "Lower" in day_type:
+                include = any(x in exercise_lower for x in ['squat', 'leg', 'deadlift'])
+            elif "Upper" in day_type:
+                include = any(x in exercise_lower for x in ['bench', 'press', 'row', 'pull', 'chest'])
+
+            if include:
+                # Calculate target weight (apply progression)
+                target_weight = analysis['avg_weight'] * (1 + analysis['progression_rate'])
+
+                # Adjust based on goal
+                if goal == "strength":
+                    target_weight *= 1.05  # Push weight up for strength
+                elif goal == "maintenance":
+                    target_weight = analysis['avg_weight']  # Keep stable
+
+                target_reps = rep_range[0] if goal == "strength" else rep_range[1]
+
+                day_exercises.append({
+                    "exercise": exercise_name,
+                    "sets": sets,
+                    "reps": target_reps,
+                    "weight_kg": round(target_weight, 1),
+                    "target_rpe": base_rpe,
+                    "notes": f"Progressive overload from {analysis['avg_weight']}kg"
+                })
+
+                # Calculate volume for this exercise
+                volume = target_weight * target_reps * sets
+                total_volume += volume
+                total_stress += (volume * base_rpe) / 10
+
+        # Create daily workout
+        if day_exercises:
+            notes = f"{day_type} workout"
+            if recovery_score and recovery_score < 70:
+                notes += " - Reduced intensity due to recovery"
+
+            weekly_plan.append({
+                "day": day_name,
+                "exercises": day_exercises,
+                "notes": notes
+            })
+
+    # Add rest days
+    rest_days_needed = 7 - training_days
+    for i in range(rest_days_needed):
+        rest_day_index = training_days + i
+        if rest_day_index < 7:
+            weekly_plan.append({
+                "day": day_names[rest_day_index],
+                "exercises": [],
+                "notes": "Rest day - Focus on recovery"
+            })
+
+    # Generate progression strategy
+    if goal == "strength":
+        progression_strategy = "Linear progression: Increase weight by 2.5-5kg when all sets completed at target RPE"
+    elif goal == "hypertrophy":
+        progression_strategy = "Volume progression: Increase reps first, then weight. Add 1-2 reps per week until top of range"
+    else:
+        progression_strategy = "Maintenance: Keep current weights and volume, focus on form and consistency"
+
+    # Generate recommendations
+    recommendations = []
+    avg_rpe = np.mean([analysis['avg_rpe'] for analysis in exercise_analysis.values()])
+
+    if avg_rpe > 8.5:
+        recommendations.append("Recent average RPE is high - consider a deload week soon")
+    if recovery_score and recovery_score < 60:
+        recommendations.append("Recovery score is low - prioritize sleep and nutrition")
+    if len(exercise_analysis) < 3:
+        recommendations.append("Consider adding more exercise variety for balanced development")
+    recommendations.append(f"Target {training_days} training days per week with {7-training_days} rest days")
+
+    return {
+        "weekly_plan": weekly_plan,
+        "total_weekly_volume": round(total_volume, 1),
+        "estimated_training_stress": round(total_stress, 1),
+        "progression_strategy": progression_strategy,
+        "recommendations": recommendations
+    }
+
 # API Endpoints
 @app.get("/")
 async def root():
     return {
-        "message": "ML Fitness Tools API - Week 4",
-        "version": "1.1.0",
+        "message": "ML Fitness Tools API - Week 5",
+        "version": "1.2.0",
         "endpoints": {
             "/calculate-rpe": "POST - Calculate RPE-based metrics",
             "/predict-strength": "POST - Predict next workout strength",
             "/recovery-status": "POST - Calculate recovery score",
             "/overtraining-risk": "POST - Detect overtraining risk",
+            "/generate-workout-plan": "POST - Generate weekly workout plan",
             "/health": "GET - API health check",
             "/docs": "GET - API documentation"
         }
@@ -469,14 +683,45 @@ async def overtraining_risk(request: OvertrainingRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+@app.post("/generate-workout-plan", response_model=WorkoutPlanResponse)
+async def generate_workout_plan_endpoint(request: WorkoutPlanRequest):
+    """Generate weekly workout plan based on training history and goals"""
+    try:
+        plan = generate_workout_plan(
+            request.training_history,
+            request.goal,
+            request.training_days_per_week,
+            request.recovery_score
+        )
+
+        # Convert plan to response format
+        daily_workouts = [
+            DailyWorkout(
+                day=day_data["day"],
+                exercises=day_data["exercises"],
+                notes=day_data["notes"]
+            )
+            for day_data in plan["weekly_plan"]
+        ]
+
+        return WorkoutPlanResponse(
+            weekly_plan=daily_workouts,
+            total_weekly_volume=plan["total_weekly_volume"],
+            estimated_training_stress=plan["estimated_training_stress"],
+            progression_strategy=plan["progression_strategy"],
+            recommendations=plan["recommendations"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 if __name__ == "__main__":
     # Configuration from environment variables
     HOST = os.getenv("API_HOST", "0.0.0.0")
     PORT = int(os.getenv("API_PORT", "8000"))
 
     print("🏋️‍♂️ Starting ML Fitness Tools API...")
-    print("📊 Week 4: Overtraining Risk Detector")
-    print("🚨 New feature: /overtraining-risk endpoint")
+    print("📊 Week 5: Workout Plan Recommender")
+    print("🚨 New feature: /generate-workout-plan endpoint")
     print(f"🌐 API will be available at: http://localhost:{PORT}")
     print(f"📖 Documentation at: http://localhost:{PORT}/docs")
     print(f"🔒 Allowed origins: {', '.join(ALLOWED_ORIGINS)}")

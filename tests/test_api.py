@@ -386,3 +386,227 @@ class TestDocumentation:
         assert "/predict-strength" in schema["paths"]
         assert "/recovery-status" in schema["paths"]
         assert "/overtraining-risk" in schema["paths"]
+        assert "/generate-workout-plan" in schema["paths"]
+
+
+class TestWorkoutPlanEndpoint:
+    """Tests for /generate-workout-plan endpoint (Week 5)"""
+
+    def test_valid_workout_plan_request(self):
+        """Test valid workout plan generation request"""
+        payload = {
+            "training_history": {
+                "squat": [
+                    {"weight": 100, "reps": 5, "rpe": 8.0},
+                    {"weight": 102.5, "reps": 5, "rpe": 8.0},
+                    {"weight": 105, "reps": 5, "rpe": 8.5},
+                ],
+                "bench_press": [
+                    {"weight": 80, "reps": 5, "rpe": 7.5},
+                    {"weight": 82.5, "reps": 5, "rpe": 8.0},
+                    {"weight": 85, "reps": 5, "rpe": 8.0},
+                ]
+            },
+            "goal": "hypertrophy",
+            "training_days_per_week": 4,
+            "recovery_score": 80.0
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "weekly_plan" in data
+        assert "total_weekly_volume" in data
+        assert "estimated_training_stress" in data
+        assert "progression_strategy" in data
+        assert "recommendations" in data
+
+        # Should have 7 days total
+        assert len(data["weekly_plan"]) == 7
+
+        # Each day should have required fields
+        for day in data["weekly_plan"]:
+            assert "day" in day
+            assert "exercises" in day
+            assert "notes" in day
+
+        # Volume and stress should be positive
+        assert data["total_weekly_volume"] > 0
+        assert data["estimated_training_stress"] > 0
+
+    def test_workout_plan_with_strength_goal(self):
+        """Test workout plan with strength goal"""
+        payload = {
+            "training_history": {
+                "squat": [
+                    {"weight": 120, "reps": 5, "rpe": 8.5},
+                    {"weight": 122.5, "reps": 5, "rpe": 8.5},
+                    {"weight": 125, "reps": 5, "rpe": 9.0},
+                ]
+            },
+            "goal": "strength",
+            "training_days_per_week": 3
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "linear" in data["progression_strategy"].lower()
+
+    def test_workout_plan_with_maintenance_goal(self):
+        """Test workout plan with maintenance goal"""
+        payload = {
+            "training_history": {
+                "squat": [
+                    {"weight": 100, "reps": 5, "rpe": 7.5},
+                    {"weight": 100, "reps": 5, "rpe": 7.5},
+                    {"weight": 100, "reps": 5, "rpe": 7.5},
+                ]
+            },
+            "goal": "maintenance",
+            "training_days_per_week": 3
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+        assert "maintenance" in data["progression_strategy"].lower()
+
+    def test_workout_plan_default_values(self):
+        """Test workout plan with default values"""
+        payload = {
+            "training_history": {
+                "bench_press": [
+                    {"weight": 80, "reps": 5, "rpe": 8.0},
+                    {"weight": 82.5, "reps": 5, "rpe": 8.0},
+                    {"weight": 85, "reps": 5, "rpe": 8.0},
+                ]
+            }
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+        # Should use default goal (hypertrophy) and training_days (4)
+        # Plan should have at least some days
+        assert len(data["weekly_plan"]) > 0
+        assert data["total_weekly_volume"] > 0
+
+    def test_workout_plan_with_low_recovery(self):
+        """Test workout plan adjusts for low recovery"""
+        payload = {
+            "training_history": {
+                "squat": [
+                    {"weight": 100, "reps": 5, "rpe": 8.0},
+                    {"weight": 102.5, "reps": 5, "rpe": 8.0},
+                    {"weight": 105, "reps": 5, "rpe": 8.0},
+                ]
+            },
+            "goal": "hypertrophy",
+            "training_days_per_week": 4,
+            "recovery_score": 40.0
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+        # Should have recommendations about recovery
+        recommendations_text = " ".join(data["recommendations"]).lower()
+        assert "recovery" in recommendations_text or "sleep" in recommendations_text
+
+    def test_workout_plan_empty_history(self):
+        """Test workout plan with empty training history"""
+        payload = {
+            "training_history": {},
+            "goal": "hypertrophy",
+            "training_days_per_week": 4
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 400
+
+    def test_workout_plan_missing_fields(self):
+        """Test workout plan with missing required fields"""
+        payload = {
+            # Missing training_history
+            "goal": "hypertrophy",
+            "training_days_per_week": 4
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 422  # Validation error
+
+    def test_workout_plan_invalid_goal(self):
+        """Test workout plan with invalid goal"""
+        payload = {
+            "training_history": {
+                "squat": [
+                    {"weight": 100, "reps": 5, "rpe": 8.0},
+                    {"weight": 102.5, "reps": 5, "rpe": 8.0},
+                ]
+            },
+            "goal": "invalid_goal",  # Invalid
+            "training_days_per_week": 4
+        }
+
+        # Should still work - goal is validated within function logic
+        response = client.post("/generate-workout-plan", json=payload)
+        # Either succeeds with default handling or returns error
+        assert response.status_code in [200, 400]
+
+    def test_workout_plan_different_training_days(self):
+        """Test workout plan with different training days per week"""
+        training_history = {
+            "squat": [{"weight": 100, "reps": 5, "rpe": 8.0}] * 3,
+            "bench_press": [{"weight": 80, "reps": 5, "rpe": 8.0}] * 3,
+            "deadlift": [{"weight": 140, "reps": 5, "rpe": 8.5}] * 3,
+        }
+
+        for days in [2, 3, 4, 5]:
+            payload = {
+                "training_history": training_history,
+                "goal": "hypertrophy",
+                "training_days_per_week": days
+            }
+
+            response = client.post("/generate-workout-plan", json=payload)
+            assert response.status_code == 200
+
+            data = response.json()
+            # Should have at least some training days (may be less than requested if exercises don't match all splits)
+            training_days = [d for d in data["weekly_plan"] if d["exercises"]]
+            assert len(training_days) > 0
+            assert len(training_days) <= days
+
+    def test_workout_plan_exercise_selection(self):
+        """Test that exercises are appropriately selected for workout days"""
+        payload = {
+            "training_history": {
+                "squat": [{"weight": 100, "reps": 5, "rpe": 8.0}] * 3,
+                "bench_press": [{"weight": 80, "reps": 5, "rpe": 8.0}] * 3,
+                "deadlift": [{"weight": 140, "reps": 5, "rpe": 8.5}] * 3,
+            },
+            "goal": "hypertrophy",
+            "training_days_per_week": 3
+        }
+
+        response = client.post("/generate-workout-plan", json=payload)
+        assert response.status_code == 200
+
+        data = response.json()
+
+        # All exercises should appear in the plan
+        all_exercises = []
+        for day in data["weekly_plan"]:
+            for ex in day["exercises"]:
+                all_exercises.append(ex["exercise"].lower())
+
+        # Check that our exercises are included
+        assert any("squat" in ex for ex in all_exercises)
+        assert any("bench" in ex or "press" in ex for ex in all_exercises)
+        assert any("deadlift" in ex for ex in all_exercises)
