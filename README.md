@@ -1,5 +1,10 @@
 # ML Fitness Tools 💪🤖
 
+[![CI/CD Pipeline](https://github.com/daleconaghan/ml-fitness-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/daleconaghan/ml-fitness-tools/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-42%20passing-brightgreen)](https://github.com/daleconaghan/ml-fitness-tools)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 Week 4/260 of shipping ML code every week.
 
 📅 **Roadmap:** [View all upcoming features here](ROADMAP.md)
@@ -62,6 +67,60 @@ export API_PORT="8000"
 ```
 
 See `.env.example` for all available configuration options.
+
+## Development
+
+### Setup Development Environment
+
+```bash
+# Install development dependencies
+make install-dev
+
+# Or manually:
+pip install -r requirements-dev.txt
+pre-commit install
+```
+
+### Common Commands
+
+```bash
+make test          # Run all tests
+make test-cov      # Run tests with coverage report
+make lint          # Check code quality
+make format        # Auto-format code
+make security      # Run security checks
+make ci            # Run all CI checks locally
+make run           # Start the API server
+```
+
+### Running CI Checks Locally
+
+Before pushing, run all CI checks:
+
+```bash
+make ci
+```
+
+This runs the same tests, linting, and security checks that GitHub Actions will run.
+
+### Pre-commit Hooks
+
+Pre-commit hooks automatically run before each commit:
+
+```bash
+# Install hooks
+pre-commit install
+
+# Run manually on all files
+pre-commit run --all-files
+```
+
+The hooks will:
+- Format code with Black
+- Sort imports with isort
+- Lint with Ruff
+- Check for security issues with Bandit
+- Run tests
 
 ## API Usage
 
