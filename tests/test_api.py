@@ -453,7 +453,7 @@ class TestWorkoutPlanEndpoint:
         assert response.status_code == 200
 
         data = response.json()
-        assert "linear" in data["progression_strategy"].lower()
+        assert "undulating" in data["progression_strategy"].lower()
 
     def test_workout_plan_with_maintenance_goal(self):
         """Test workout plan with maintenance goal"""

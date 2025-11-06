@@ -370,9 +370,85 @@ def detect_overtraining_risk(sessions: List[Dict], sleep_avg: float, stress_avg:
     }
 
 # New Workout Plan Recommender (Week 5)
+# Exercise-specific progression rates (kg per week)
+EXERCISE_PROGRESSION_RATES = {
+    'squat': 2.5,
+    'deadlift': 2.5,
+    'bench_press': 1.25,
+    'bench': 1.25,
+    'overhead_press': 0.625,
+    'press': 0.625,
+    'row': 1.25,
+    'pull': 0.625,
+    'curl': 0.5,
+    'lateral': 0.25,
+    'tricep': 0.5,
+    'default': 1.0
+}
+
+# Rep ranges for undulating periodization
+DUP_PATTERNS = {
+    'strength': [
+        {'sets': 5, 'reps': 3, 'intensity': 0.90, 'label': 'Heavy'},
+        {'sets': 4, 'reps': 6, 'intensity': 0.85, 'label': 'Medium'},
+        {'sets': 3, 'reps': 5, 'intensity': 0.87, 'label': 'Moderate'}
+    ],
+    'hypertrophy': [
+        {'sets': 3, 'reps': 10, 'intensity': 0.70, 'label': 'Volume'},
+        {'sets': 4, 'reps': 8, 'intensity': 0.75, 'label': 'Medium'},
+        {'sets': 3, 'reps': 12, 'intensity': 0.65, 'label': 'Pump'}
+    ],
+    'maintenance': [
+        {'sets': 3, 'reps': 8, 'intensity': 0.70, 'label': 'Moderate'},
+        {'sets': 3, 'reps': 10, 'intensity': 0.65, 'label': 'Light'},
+        {'sets': 3, 'reps': 6, 'intensity': 0.75, 'label': 'Medium'}
+    ]
+}
+
+def get_exercise_progression_rate(exercise_name: str) -> float:
+    """Get realistic progression rate for an exercise"""
+    exercise_lower = exercise_name.lower()
+    for key, rate in EXERCISE_PROGRESSION_RATES.items():
+        if key in exercise_lower:
+            return rate
+    return EXERCISE_PROGRESSION_RATES['default']
+
+def calculate_rpe_cap(recovery_score: Optional[float], avg_recent_rpe: float) -> float:
+    """Calculate maximum RPE based on recovery and fatigue"""
+    base_cap = 9.5
+
+    # Adjust for recovery score
+    if recovery_score is not None:
+        if recovery_score < 50:
+            base_cap = 7.0
+        elif recovery_score < 60:
+            base_cap = 7.5
+        elif recovery_score < 70:
+            base_cap = 8.0
+        elif recovery_score < 80:
+            base_cap = 8.5
+
+    # Adjust for cumulative fatigue (high recent RPE)
+    if avg_recent_rpe > 8.5:
+        base_cap = min(base_cap, 8.0)  # Force deload if fatigue is high
+    elif avg_recent_rpe > 8.0:
+        base_cap = min(base_cap, 8.5)
+
+    return base_cap
+
+def should_deload(avg_recent_rpe: float, recovery_score: Optional[float]) -> bool:
+    """Determine if a deload week is needed"""
+    # Deload if recent RPE is consistently very high
+    if avg_recent_rpe > 8.7:
+        return True
+    # Deload if recovery is critically low
+    if recovery_score is not None and recovery_score < 50:
+        return True
+    return False
+
 def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
                          training_days: int, recovery_score: Optional[float] = None) -> Dict:
-    """Generate weekly workout plan based on training history and goals"""
+    """Generate weekly workout plan based on training history and goals with realistic progression"""
 
     if not training_history:
         raise ValueError("No training history provided")
@@ -400,13 +476,11 @@ def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
         avg_weight = np.mean(weights)
         avg_rpe = np.mean(rpes)
 
-        # Simple progression calculation
-        if len(weights) >= 3:
-            early_avg = np.mean(weights[:len(weights)//2])
-            late_avg = np.mean(weights[len(weights)//2:])
-            progression_rate = (late_avg - early_avg) / early_avg if early_avg > 0 else 0
-        else:
-            progression_rate = 0.025  # Default 2.5%
+        # Get exercise-specific progression rate
+        progression_kg = get_exercise_progression_rate(exercise)
+
+        # Calculate percentage progression from absolute kg progression
+        progression_rate = progression_kg / avg_weight if avg_weight > 0 else 0.025
 
         # Estimate 1RM from recent best set
         best_recent = max(recent_sessions[-3:], key=lambda x: x.get('weight', 0))
@@ -418,12 +492,18 @@ def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
             'avg_weight': avg_weight,
             'avg_rpe': avg_rpe,
             'progression_rate': progression_rate,
+            'progression_kg': progression_kg,
             'estimated_1rm': estimated_1rm,
             'recent_sessions': len(recent_sessions)
         }
 
     if not exercise_analysis:
         raise ValueError("Insufficient training data to generate plan")
+
+    # Calculate overall fatigue metrics
+    avg_recent_rpe = np.mean([analysis['avg_rpe'] for analysis in exercise_analysis.values()])
+    rpe_cap = calculate_rpe_cap(recovery_score, avg_recent_rpe)
+    is_deload = should_deload(avg_recent_rpe, recovery_score)
 
     # Determine training split based on days per week
     if training_days <= 2:
@@ -437,27 +517,12 @@ def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
     else:
         split = ["Push", "Pull", "Legs", "Upper", "Lower", "Full Body"]
 
-    # Adjust intensity based on goal and recovery
-    if goal == "strength":
-        base_rpe = 8.5
-        rep_range = (3, 5)
-        sets = 4
-    elif goal == "hypertrophy":
-        base_rpe = 8.0
-        rep_range = (6, 10)
-        sets = 3
-    else:  # maintenance
-        base_rpe = 7.0
-        rep_range = (5, 8)
-        sets = 3
+    # Get DUP pattern for the goal
+    dup_pattern = DUP_PATTERNS.get(goal, DUP_PATTERNS['hypertrophy'])
 
-    # Adjust for recovery if provided
-    if recovery_score is not None:
-        if recovery_score < 50:
-            base_rpe -= 1.5
-            sets = max(2, sets - 1)
-        elif recovery_score < 70:
-            base_rpe -= 0.5
+    # Deload adjustments if needed
+    deload_volume_mult = 0.5 if is_deload else 1.0
+    deload_intensity_mult = 0.85 if is_deload else 1.0
 
     # Generate weekly plan
     weekly_plan = []
@@ -466,6 +531,9 @@ def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
     for i in range(training_days):
         day_type = split[i % len(split)]
         day_name = day_names[i]
+
+        # Select DUP pattern for this day (rotate through patterns)
+        dup_day = dup_pattern[i % len(dup_pattern)]
 
         # Select exercises for this day based on split type
         day_exercises = []
@@ -488,41 +556,62 @@ def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
                 include = any(x in exercise_lower for x in ['bench', 'press', 'row', 'pull', 'chest'])
 
             if include:
-                # Calculate target weight (apply progression)
-                target_weight = analysis['avg_weight'] * (1 + analysis['progression_rate'])
-
-                # Adjust based on goal
-                if goal == "strength":
-                    target_weight *= 1.05  # Push weight up for strength
+                # Calculate target weight using exercise-specific progression
+                if is_deload:
+                    # Deload: reduce weight significantly
+                    target_weight = analysis['avg_weight'] * deload_intensity_mult
                 elif goal == "maintenance":
-                    target_weight = analysis['avg_weight']  # Keep stable
+                    # Maintenance: keep weight stable
+                    target_weight = analysis['avg_weight']
+                else:
+                    # Progressive overload: add progression in kg
+                    target_weight = analysis['avg_weight'] + analysis['progression_kg']
 
-                target_reps = rep_range[0] if goal == "strength" else rep_range[1]
+                # Apply DUP intensity adjustment (percentage of estimated 1RM)
+                if not is_deload:
+                    target_weight = analysis['estimated_1rm'] * dup_day['intensity']
+
+                # Use DUP sets and reps
+                sets = int(dup_day['sets'] * deload_volume_mult)
+                sets = max(1, sets)  # At least 1 set
+                reps = dup_day['reps']
+
+                # Calculate target RPE with cap
+                base_rpe = 7.0 + (dup_day['intensity'] - 0.65) * 10  # Scale RPE with intensity
+                target_rpe = min(base_rpe, rpe_cap)
+
+                # Add some descriptive notes
+                if is_deload:
+                    notes = f"DELOAD - 50% volume, lighter weight"
+                else:
+                    notes = f"{dup_day['label']} day - {int(dup_day['intensity']*100)}% 1RM"
 
                 day_exercises.append({
                     "exercise": exercise_name,
                     "sets": sets,
-                    "reps": target_reps,
+                    "reps": reps,
                     "weight_kg": round(target_weight, 1),
-                    "target_rpe": base_rpe,
-                    "notes": f"Progressive overload from {analysis['avg_weight']}kg"
+                    "target_rpe": round(target_rpe, 1),
+                    "notes": notes
                 })
 
                 # Calculate volume for this exercise
-                volume = target_weight * target_reps * sets
+                volume = target_weight * reps * sets
                 total_volume += volume
-                total_stress += (volume * base_rpe) / 10
+                total_stress += (volume * target_rpe) / 10
 
         # Create daily workout
         if day_exercises:
-            notes = f"{day_type} workout"
-            if recovery_score and recovery_score < 70:
-                notes += " - Reduced intensity due to recovery"
+            workout_notes = f"{day_type} workout - {dup_day['label']}"
+            if is_deload:
+                workout_notes += " [DELOAD WEEK]"
+            elif recovery_score and recovery_score < 70:
+                workout_notes += " - RPE capped for recovery"
 
             weekly_plan.append({
                 "day": day_name,
                 "exercises": day_exercises,
-                "notes": notes
+                "notes": workout_notes
             })
 
     # Add rest days
@@ -536,25 +625,42 @@ def generate_workout_plan(training_history: Dict[str, List[Dict]], goal: str,
                 "notes": "Rest day - Focus on recovery"
             })
 
-    # Generate progression strategy
-    if goal == "strength":
-        progression_strategy = "Linear progression: Increase weight by 2.5-5kg when all sets completed at target RPE"
+    # Generate progression strategy based on current state
+    if is_deload:
+        progression_strategy = "DELOAD WEEK: Reduce volume by 50%, lighter weights. Focus on recovery and technique refinement"
+    elif goal == "strength":
+        progression_strategy = "Undulating periodization with exercise-specific progression. Rotate heavy (90%), medium (85%), and moderate (87%) days"
     elif goal == "hypertrophy":
-        progression_strategy = "Volume progression: Increase reps first, then weight. Add 1-2 reps per week until top of range"
+        progression_strategy = "Daily undulating periodization: Volume day (70%), Medium day (75%), Pump day (65%). Progress exercises at realistic rates"
     else:
-        progression_strategy = "Maintenance: Keep current weights and volume, focus on form and consistency"
+        progression_strategy = "Maintenance with variety: Rotate intensities to maintain fitness without fatigue accumulation"
 
-    # Generate recommendations
+    # Generate realistic recommendations
     recommendations = []
-    avg_rpe = np.mean([analysis['avg_rpe'] for analysis in exercise_analysis.values()])
 
-    if avg_rpe > 8.5:
-        recommendations.append("Recent average RPE is high - consider a deload week soon")
-    if recovery_score and recovery_score < 60:
-        recommendations.append("Recovery score is low - prioritize sleep and nutrition")
+    if is_deload:
+        recommendations.append("🔴 DELOAD RECOMMENDED: High fatigue detected - reduce volume and intensity this week")
+    elif avg_recent_rpe > 8.3:
+        recommendations.append("⚠️  Fatigue is accumulating - deload may be needed soon")
+
+    if recovery_score is not None:
+        if recovery_score < 60:
+            recommendations.append("🛌 Low recovery score - prioritize 8+ hours sleep and stress management")
+        elif recovery_score < 75:
+            recommendations.append("💤 Moderate recovery - RPE has been capped to prevent overtraining")
+
+    # Exercise-specific progression feedback
+    for exercise, analysis in exercise_analysis.items():
+        prog_kg = analysis['progression_kg']
+        if prog_kg >= 2.5:
+            recommendations.append(f"💪 {exercise}: Adding +{prog_kg}kg per week (compound movement)")
+        elif prog_kg < 1.0:
+            recommendations.append(f"🎯 {exercise}: Small progressions (+{prog_kg}kg) - normal for isolation exercises")
+
     if len(exercise_analysis) < 3:
-        recommendations.append("Consider adding more exercise variety for balanced development")
-    recommendations.append(f"Target {training_days} training days per week with {7-training_days} rest days")
+        recommendations.append("📊 Consider adding more exercise variety for balanced development")
+
+    recommendations.append(f"📅 Training {training_days} days/week with DUP - different intensities each session")
 
     return {
         "weekly_plan": weekly_plan,
