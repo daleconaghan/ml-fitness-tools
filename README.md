@@ -1,6 +1,11 @@
 # ML Fitness Tools 💪🤖
 
-Week 4/260 of shipping ML code every week.
+[![CI/CD Pipeline](https://github.com/daleconaghan/ml-fitness-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/daleconaghan/ml-fitness-tools/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-61%20passing-brightgreen)](https://github.com/daleconaghan/ml-fitness-tools)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+Week 5/260 of shipping ML code every week.
 
 📅 **Roadmap:** [View all upcoming features here](ROADMAP.md)
 
@@ -30,6 +35,13 @@ I'm building machine learning tools for serious lifters. Every week for 5 years,
 - Multi-factor analysis: training load trends, RPE inflation, recovery metrics
 - Risk levels: Low/Moderate/High/Critical with deload recommendations
 - New `/overtraining-risk` API endpoint
+
+**Week 5: Workout Plan Recommender** (Oct 3, 2025)
+- AI-generated weekly workout plans based on last 4 weeks of training data
+- Progressive overload calculations with automatic volume adjustments
+- Supports multiple goals: strength, hypertrophy, maintenance
+- Adapts training splits (3-6 days/week) and adjusts for recovery score
+- New `/generate-workout-plan` API endpoint
 
 ## Quick Start
 ```bash
@@ -63,15 +75,70 @@ export API_PORT="8000"
 
 See `.env.example` for all available configuration options.
 
+## Development
+
+### Setup Development Environment
+
+```bash
+# Install development dependencies
+make install-dev
+
+# Or manually:
+pip install -r requirements-dev.txt
+pre-commit install
+```
+
+### Common Commands
+
+```bash
+make test          # Run all tests
+make test-cov      # Run tests with coverage report
+make lint          # Check code quality
+make format        # Auto-format code
+make security      # Run security checks
+make ci            # Run all CI checks locally
+make run           # Start the API server
+```
+
+### Running CI Checks Locally
+
+Before pushing, run all CI checks:
+
+```bash
+make ci
+```
+
+This runs the same tests, linting, and security checks that GitHub Actions will run.
+
+### Pre-commit Hooks
+
+Pre-commit hooks automatically run before each commit:
+
+```bash
+# Install hooks
+pre-commit install
+
+# Run manually on all files
+pre-commit run --all-files
+```
+
+The hooks will:
+- Format code with Black
+- Sort imports with isort
+- Lint with Ruff
+- Check for security issues with Bandit
+- Run tests
+
 ## API Usage
 
 Start the server: `python recovery_api.py`
 
 **Available endpoints:**
 - `POST /calculate-rpe` - Calculate RPE-based metrics
-- `POST /predict-strength` - Predict next workout strength  
+- `POST /predict-strength` - Predict next workout strength
 - `POST /recovery-status` - Get recovery score and recommendations
 - `POST /overtraining-risk` - Detect overtraining risk with recommendations
+- `POST /generate-workout-plan` - Generate AI-powered weekly workout plan
 - `GET /health` - API health check
 - `GET /docs` - Interactive API documentation
 
@@ -101,6 +168,25 @@ curl -X POST "http://localhost:8000/overtraining-risk" \
     "motivation_level": 4,
     "resting_hr_trend": 8
   }'
+
+# Generate workout plan
+curl -X POST "http://localhost:8000/generate-workout-plan" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "training_history": {
+      "squat": [
+        {"weight": 315, "reps": 5, "rpe": 8.5},
+        {"weight": 320, "reps": 5, "rpe": 9.0}
+      ],
+      "bench_press": [
+        {"weight": 225, "reps": 5, "rpe": 8.0},
+        {"weight": 230, "reps": 5, "rpe": 8.5}
+      ]
+    },
+    "goal": "hypertrophy",
+    "training_days_per_week": 4,
+    "recovery_score": 80.0
+  }'
 ```
 
 ## The Journey
@@ -113,13 +199,13 @@ curl -X POST "http://localhost:8000/overtraining-risk" \
 
 ✅ **Week 4**: Overtraining Risk Detector
 
-⬜ **Week 5** (Oct 3): Workout Plan Recommender
+✅ **Week 5**: Workout Plan Recommender
 
 ⬜ **Week 6-260**: Building the future of training
 
 ---
 
-**Next Week**: Auto-generated workout plans. ML recommends weekly training based on your last 4 weeks of data.
+**Next Week**: Exercise substitution engine. ML suggests replacement exercises based on available equipment and target muscle groups.
 
 Building at the intersection of machine learning and strength training.
 
