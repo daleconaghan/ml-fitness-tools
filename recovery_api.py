@@ -11,10 +11,27 @@ import json
 import numpy as np
 from datetime import datetime, date
 import uvicorn
+import os
+from pathlib import Path
+
+# Configuration from environment variables
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:8080,http://127.0.0.1:3000"
+).split(",")
+
+# Get the directory where this script is located
+SCRIPT_DIR = Path(__file__).parent.resolve()
+TRAINING_DATA_PATH = SCRIPT_DIR / 'training_data.json'
 
 # Load existing models/data
-with open('training_data.json', 'r') as f:
-    training_data = json.load(f)
+try:
+    with open(TRAINING_DATA_PATH, 'r') as f:
+        training_data = json.load(f)
+except FileNotFoundError:
+    raise RuntimeError(f"Training data file not found at {TRAINING_DATA_PATH}. Please ensure training_data.json exists.")
+except json.JSONDecodeError as e:
+    raise RuntimeError(f"Invalid JSON in training data file: {e}")
 
 app = FastAPI(
     title="ML Fitness Tools API",
@@ -22,13 +39,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS
+# Enable CORS with secure defaults
+# To allow all origins (NOT recommended for production), set ALLOWED_ORIGINS="*"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Pydantic models for request/response
@@ -452,10 +470,15 @@ async def overtraining_risk(request: OvertrainingRequest):
         raise HTTPException(status_code=400, detail=str(e))
 
 if __name__ == "__main__":
+    # Configuration from environment variables
+    HOST = os.getenv("API_HOST", "0.0.0.0")
+    PORT = int(os.getenv("API_PORT", "8000"))
+
     print("🏋️‍♂️ Starting ML Fitness Tools API...")
     print("📊 Week 4: Overtraining Risk Detector")
     print("🚨 New feature: /overtraining-risk endpoint")
-    print("🌐 API will be available at: http://localhost:8000")
-    print("📖 Documentation at: http://localhost:8000/docs")
-    
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print(f"🌐 API will be available at: http://localhost:{PORT}")
+    print(f"📖 Documentation at: http://localhost:{PORT}/docs")
+    print(f"🔒 Allowed origins: {', '.join(ALLOWED_ORIGINS)}")
+
+    uvicorn.run(app, host=HOST, port=PORT)

@@ -9,23 +9,23 @@ I'm building machine learning tools for serious lifters. Every week for 5 years,
 
 ## Completed Projects
 
-**Week 1: RPE Volume Calculator** (Aug 8, 2025)
+**Week 1: RPE Volume Calculator** (Sep 5, 2025)
 - Adjusts training volume based on Rate of Perceived Exertion
-- Calculates effective training stress, not just weight × reps × sets  
+- Calculates effective training stress, not just weight × reps × sets
 - Foundation for all future predictions
 
-**Week 2: Strength Predictor** (Aug 8, 2025)  
+**Week 2: Strength Predictor** (Sep 12, 2025)
 - Linear regression model using training history
 - Predicts next workout: 78.8kg × 5 reps
 - Model confidence: 100%
 
-**Week 3: Recovery API** (Aug 15, 2025)  
+**Week 3: Recovery API** (Sep 19, 2025)
 - FastAPI server with REST endpoints
 - Recovery score calculation based on sleep, stress, soreness
 - HTTP API for RPE calculations and strength predictions
 - Auto-generated documentation at `/docs`
 
-**Week 4: Overtraining Risk Detector** (Sep 10, 2025)
+**Week 4: Overtraining Risk Detector** (Sep 26, 2025)
 - Advanced ML algorithm detecting overtraining risk (0-100%)
 - Multi-factor analysis: training load trends, RPE inflation, recovery metrics
 - Risk levels: Low/Moderate/High/Critical with deload recommendations
@@ -43,7 +43,25 @@ python recovery_api.py
 # Or run individual tools (standalone versions)
 python standalone/rpe_calculator.py
 python standalone/week2_strength_predictor.py
+
+# Run tests
+pytest tests/
 ```
+
+## Configuration
+
+The API can be configured using environment variables:
+
+```bash
+# Set allowed CORS origins (comma-separated)
+export ALLOWED_ORIGINS="http://localhost:3000,http://localhost:8080"
+
+# Set API host and port
+export API_HOST="0.0.0.0"
+export API_PORT="8000"
+```
+
+See `.env.example` for all available configuration options.
 
 ## API Usage
 
@@ -89,13 +107,13 @@ curl -X POST "http://localhost:8000/overtraining-risk" \
 
 ✅ **Week 1**: RPE Calculator
 
-✅ **Week 2**: Strength Predictor  
+✅ **Week 2**: Strength Predictor
 
 ✅ **Week 3**: Recovery API
 
 ✅ **Week 4**: Overtraining Risk Detector
 
-⬜ **Week 5** (Aug 29): Workout Plan Recommender
+⬜ **Week 5** (Oct 3): Workout Plan Recommender
 
 ⬜ **Week 6-260**: Building the future of training
 

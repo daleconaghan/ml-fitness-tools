@@ -8,21 +8,21 @@ _Tracking every feature, every week — 260 weeks of shipping ML code for seriou
 ---
 
 ## ✅ Completed
-| Week | Date        | Feature | Summary |
-| ---- | ----------- | ------- | ------- |
-| 1    | Aug 8, 2025 | **RPE Volume Calculator** | Adjusts training volume based on Rate of Perceived Exertion. Calculates effective training stress, not just weight × reps × sets. Foundation for all future predictions. |
-| 2    | Aug 8, 2025 | **Strength Predictor** | Linear regression model using training history. Predicts next workout weight × reps with confidence score. |
-| 3    | Aug 15, 2025 | **Recovery API** | FastAPI server with REST endpoints. Recovery score calculation, HTTP API for RPE calculations and strength predictions. Auto-generated docs at `/docs`. |
-| 4    | Sep 10, 2025 | **Overtraining Risk Detector** | Advanced ML algorithm detecting overtraining risk (0-100%). Multi-factor analysis with risk levels and deload recommendations. |
+| Week | Date         | Feature | Summary |
+| ---- | ------------ | ------- | ------- |
+| 1    | Sep 5, 2025  | **RPE Volume Calculator** | Adjusts training volume based on Rate of Perceived Exertion. Calculates effective training stress, not just weight × reps × sets. Foundation for all future predictions. |
+| 2    | Sep 12, 2025 | **Strength Predictor** | Linear regression model using training history. Predicts next workout weight × reps with confidence score. |
+| 3    | Sep 19, 2025 | **Recovery API** | FastAPI server with REST endpoints. Recovery score calculation, HTTP API for RPE calculations and strength predictions. Auto-generated docs at `/docs`. |
+| 4    | Sep 26, 2025 | **Overtraining Risk Detector** | Advanced ML algorithm detecting overtraining risk (0-100%). Multi-factor analysis with risk levels and deload recommendations. |
 
 ---
 
 ## 🔜 Upcoming
-| Week | Date        | Feature | Goal |
-| ---- | ----------- | ------- | ---- |
-| 5    | Aug 29, 2025 | **Workout Plan Recommender** | Auto-generate weekly workout plans based on last 4 weeks of data. Adjusts volume, intensity, and exercises to keep progress steady. |
-| 6    | Sep 5, 2025  | **Exercise Substitution Engine** | Suggest replacement exercises based on available equipment and target muscle groups. |
-| 7    | Sep 12, 2025 | **Plateau Breaker AI** | Detect stalled lifts and suggest strategies to break plateaus (rep schemes, accessory work, deloads). |
+| Week | Date         | Feature | Goal |
+| ---- | ------------ | ------- | ---- |
+| 5    | Oct 3, 2025  | **Workout Plan Recommender** | Auto-generate weekly workout plans based on last 4 weeks of data. Adjusts volume, intensity, and exercises to keep progress steady. |
+| 6    | Oct 10, 2025 | **Exercise Substitution Engine** | Suggest replacement exercises based on available equipment and target muscle groups. |
+| 7    | Oct 17, 2025 | **Plateau Breaker AI** | Detect stalled lifts and suggest strategies to break plateaus (rep schemes, accessory work, deloads). |
 
 ---
 
